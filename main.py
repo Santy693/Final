@@ -196,7 +196,7 @@ async def play_next_song(voice_client, guild_id, channel):
             "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
             "options": "-vn -c:a libopus -b:a 96k",
         }
-        source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable="E:\\Escritorio XD\\ffmpeg-7.1.1-essentials_build\\bin\\ffmpeg.exe")
+        source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable="E:\\Escritorio XD\\ffmpeg-7.1.1-essentials_build\\bin\\ffmpeg.exe") # Ruta de acceso de ffmpeg
 
         # Usamos un future para esperar a que termine la canción antes de seguir el bucle
         done = asyncio.Event()
