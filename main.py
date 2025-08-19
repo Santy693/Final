@@ -33,7 +33,7 @@ intents.message_content = True
 
 # Vuelve a cargar el token por si acaso (no es necesario dos veces, pero no molesta)
 load_dotenv()
-token = os.getenv('DISCORD_TOKEN')
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 # Crea la instancia del bot con el prefijo "!" y los intents configurados
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -62,7 +62,7 @@ async def play(interaction: discord.Interaction, song_query: str):
         
     # Opciones para yt_dlp, así baja solo el audio y no el video
     ydl_options = {
-        "format": "bestaudio[abr<=96]/bestaudio",
+        "format": "bestaudio/best",
         "noplaylist": True,
         "youtube_include_dash_manifest": False,
         "youtube_include_hls_manifest": False,
@@ -70,7 +70,12 @@ async def play(interaction: discord.Interaction, song_query: str):
     
     # Busca la canción en YouTube
     query = "ytsearch1: " + song_query
-    results = await search_ytdlp_async(query, ydl_options)
+    try:
+        results = await search_ytdlp_async(query, ydl_options)
+    except Exception as e:
+        await interaction.followup.send("No se pudo obtener el audio de YouTube. Probá con otra canción o link.")
+        print(f"Error yt-dlp: {e}")
+        return
     tracks = results.get("entries", [])
     
     # Si no encontró nada, avisa y sale
@@ -178,17 +183,10 @@ async def play_next_song(voice_client, guild_id, channel):
     while True:
         if not SONG_QUEUES[guild_id]:
             is_playing[guild_id] = False
-            # Espera hasta 60 segundos, chequeando cada 2 segundos si agregan algo
-            for _ in range(30):
+            # Espera hasta que agreguen algo a la cola
+            while not SONG_QUEUES[guild_id]:
                 await asyncio.sleep(2)
-                if SONG_QUEUES[guild_id]:
-                    is_playing[guild_id] = True
-                    break
-            else:
-                # Si después de esperar sigue vacía la cola, desconectate y salí
-                await voice_client.disconnect()
-                return
-            # Si se agregó algo, seguí el bucle y reproducí
+            is_playing[guild_id] = True
             continue
 
         audio_url, title = SONG_QUEUES[guild_id].popleft()
@@ -196,9 +194,8 @@ async def play_next_song(voice_client, guild_id, channel):
             "before_options": "-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
             "options": "-vn -c:a libopus -b:a 96k",
         }
-        source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable="E:\\Escritorio XD\\ffmpeg-7.1.1-essentials_build\\bin\\ffmpeg.exe") # Ruta de acceso de ffmpeg
+        source = discord.FFmpegOpusAudio(audio_url, **ffmpeg_options, executable="E:\\Escritorio XD\\ffmpeg-7.1.1-essentials_build\\bin\\ffmpeg.exe")
 
-        # Usamos un future para esperar a que termine la canción antes de seguir el bucle
         done = asyncio.Event()
 
         def after_play(error):
